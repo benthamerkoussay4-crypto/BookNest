@@ -1,26 +1,21 @@
 const express = require("express");
 const {
-  addRecommendation,
-  getAllRecommendations,
-  getSingleRecommendation,
-  addRating,
+  toggleLike,
+  addComment,
+  followUser,
+  getFeed,
 } = require("../controllers/recommendationController");
 const protect = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-// ✅ IMPORTANT: "/" must come BEFORE "/:id"
+// ✅ Like
+router.post("/:id/like", protect, toggleLike);
 
-// ✅ Get All Recommendations
-router.get("/", getAllRecommendations);
+// ✅ Comment
+router.post("/:id/comment", protect, addComment);
 
-// ✅ Get Single Recommendation
-router.get("/:id", getSingleRecommendation);
-
-// ✅ Add Recommendation
-router.post("/", protect, addRecommendation);
-
-// ✅ Add Rating
-router.post("/:id/rate", protect, addRating);
+// ✅ Feed
+router.get("/feed/me", protect, getFeed);
 
 module.exports = router;

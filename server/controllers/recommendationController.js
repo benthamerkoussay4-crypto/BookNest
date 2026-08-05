@@ -1,90 +1,83 @@
 const Recommendation = require("../models/Recommendation");
+const User = require("../models/User");
 
-// ✅ Add Recommendation
-exports.addRecommendation = async (req, res) => {
-  try {
-    const { title, author, description } = req.body;
+// ✅ Like / Unlike
+exports.toggleLike = async (req, res) => {
+  const recommendation = await Recommendation.findById(req.params.id);
 
-    const recommendation = await Recommendation.create({
-      title,
-      author,
-      description,
-      user: req.user._id,
-    });
-
-    res.status(201).json(recommendation);
-  } catch (error) {
-    res.status(500).json({ message: "Error adding recommendation" });
+  if (!recommendation) {
+    return res.status(404).json({ message: "Book not found" });
   }
+
+  const liked = recommendation.likes.includes(req.user._id);
+
+  if (liked) {
+    recommendation.likes.pull(req.user._id);
+  } else {
+    recommendation.likes.push(req.user._id);
+  }
+
+  await recommendation.save();
+
+  res.json(recommendation);
 };
 
-// ✅ Get All Recommendations
-exports.getAllRecommendations = async (req, res) => {
-  try {
-    const recommendations = await Recommendation.find()
-      .populate("user", "name email")
-      .sort({ createdAt: -1 });
+// ✅ Add Comment
+exports.addComment = async (req, res) => {
+  const { text } = req.body;
 
-    res.json(recommendations);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching recommendations" });
+  const recommendation = await Recommendation.findById(req.params.id);
+
+  if (!recommendation) {
+    return res.status(404).json({ message: "Book not found" });
   }
+
+  recommendation.comments.push({
+    user: req.user._id,
+    text,
+  });
+
+  await recommendation.save();
+
+  res.json(recommendation);
 };
 
-// ✅ Get Single Recommendation (Book Details)
-exports.getSingleRecommendation = async (req, res) => {
-  try {
-    const recommendation = await Recommendation.findById(req.params.id)
-      .populate("user", "name email")
-      .populate("ratings.user", "name");
+// ✅ Follow User
+exports.followUser = async (req, res) => {
+  const userToFollow = await User.findById(req.params.id);
 
-    if (!recommendation) {
-      return res.status(404).json({ message: "Book not found" });
-    }
-
-    res.json(recommendation);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching book details" });
+  if (!userToFollow) {
+    return res.status(404).json({ message: "User not found" });
   }
+
+  const alreadyFollowing = req.user.following.includes(userToFollow._id);
+
+  if (alreadyFollowing) {
+    req.user.following.pull(userToFollow._id);
+    userToFollow.followers.pull(req.user._id);
+  } else {
+    req.user.following.push(userToFollow._id);
+    userToFollow.followers.push(req.user._id);
+  }
+
+  await req.user.save();
+  await userToFollow.save();
+
+  res.json({ message: "Follow updated" });
 };
 
-// ✅ Add or Update Rating
-exports.addRating = async (req, res) => {
-  try {
-    const { value } = req.body;
-    const recommendation = await Recommendation.findById(req.params.id);
+// ✅ Personalized Feed
+exports.getFeed = async (req, res) => {
+  const user = await User.findById(req.user._id);
 
-    if (!recommendation) {
-      return res.status(404).json({ message: "Book not found" });
-    }
+  const feed = await Recommendation.find({
+    $or: [
+      { user: { $in: user.following } },
+      { likes: user._id },
+    ],
+  })
+    .populate("user", "name")
+    .sort({ createdAt: -1 });
 
-    const existingRating = recommendation.ratings.find(
-      (r) => r.user.toString() === req.user._id.toString()
-    );
-
-    if (existingRating) {
-      existingRating.value = value;
-    } else {
-      recommendation.ratings.push({
-        user: req.user._id,
-        value,
-      });
-    }
-
-    const total = recommendation.ratings.reduce(
-      (sum, r) => sum + r.value,
-      0
-    );
-
-    recommendation.averageRating =
-      recommendation.ratings.length > 0
-        ? total / recommendation.ratings.length
-        : 0;
-
-    await recommendation.save();
-
-    res.json(recommendation);
-  } catch (error) {
-    res.status(500).json({ message: "Error adding rating" });
-  }
+  res.json(feed);
 };

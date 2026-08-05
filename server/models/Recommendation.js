@@ -10,9 +10,29 @@ const recommendationSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    description: {
-      type: String,
-    },
+    description: String,
+
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    comments: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        text: String,
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
     ratings: [
       {
         user: {
@@ -26,10 +46,12 @@ const recommendationSchema = new mongoose.Schema(
         },
       },
     ],
+
     averageRating: {
       type: Number,
       default: 0,
     },
+
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
