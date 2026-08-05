@@ -13,10 +13,22 @@ const recommendationSchema = new mongoose.Schema(
     description: {
       type: String,
     },
-    rating: {
+    ratings: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        value: {
+          type: Number,
+          min: 1,
+          max: 5,
+        },
+      },
+    ],
+    averageRating: {
       type: Number,
-      min: 1,
-      max: 5,
+      default: 0,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
