@@ -1,7 +1,9 @@
 const Recommendation = require("../models/Recommendation");
 const User = require("../models/User");
 
-// ✅ Like / Unlike
+/* ===============================
+   TOGGLE LIKE
+================================ */
 exports.toggleLike = async (req, res) => {
   const recommendation = await Recommendation.findById(req.params.id);
 
@@ -18,11 +20,12 @@ exports.toggleLike = async (req, res) => {
   }
 
   await recommendation.save();
-
   res.json(recommendation);
 };
 
-// ✅ Add Comment
+/* ===============================
+   ADD COMMENT
+================================ */
 exports.addComment = async (req, res) => {
   const { text } = req.body;
 
@@ -38,11 +41,12 @@ exports.addComment = async (req, res) => {
   });
 
   await recommendation.save();
-
   res.json(recommendation);
 };
 
-// ✅ Follow User
+/* ===============================
+   FOLLOW / UNFOLLOW USER
+================================ */
 exports.followUser = async (req, res) => {
   const userToFollow = await User.findById(req.params.id);
 
@@ -63,21 +67,28 @@ exports.followUser = async (req, res) => {
   await req.user.save();
   await userToFollow.save();
 
-  res.json({ message: "Follow updated" });
+  res.json({ message: "Follow status updated" });
 };
 
-// ✅ Personalized Feed
+/* ===============================
+   SMART PERSONALIZED FEED
+================================ */
 exports.getFeed = async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  const feed = await Recommendation.find({
-    $or: [
-      { user: { $in: user.following } },
-      { likes: user._id },
-    ],
-  })
-    .populate("user", "name")
-    .sort({ createdAt: -1 });
+  let feed;
+
+  if (user.following.length > 0) {
+    feed = await Recommendation.find({
+      user: { $in: user.following },
+    })
+      .populate("user", "name")
+      .sort({ createdAt: -1 });
+  } else {
+    feed = await Recommendation.find()
+      .populate("user", "name")
+      .sort({ createdAt: -1 });
+  }
 
   res.json(feed);
 };
